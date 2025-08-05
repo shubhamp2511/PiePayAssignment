@@ -1,12 +1,13 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  ScrollView,
   View,
   Text,
   StyleSheet,
   Pressable,
   Modal,
+  BackHandler,
+  FlatList,
 } from 'react-native';
 import WebView from 'react-native-webview';
 import Background from '../components/Background';
@@ -31,7 +32,7 @@ const MOCK_MERCHANTS = [
       {
         title: 'Fashion',
         imageUrl:
-          'https://photo-cdn2.icons8.com/5-TM0TBn2MG_IrbA7Pn5I9ZbCV2t8i-WmyZNh6m3nKE/rs:fit:576:385/czM6Ly9pY29uczgu/bW9vc2UtcHJvZC5h/c3NldHMvYXNzZXRz/L3NhdGEvb3JpZ2lu/YWwvNzkzLzhhMTIw/Mjg5LWIyMmItNGI1/Yy05ZWQzLWZlZDVh/YzE0MDRjZC5qcGc.webp',
+          'https://photo-cdn2.icons8.com/5-TM0TBn2MG_IrbA7Pn5I9ZbCV2t8i-WmyZNh6m3nKE/rs:fit:576:385/czM6Ly9pY29uczgu/bW9vc2UtcHJvZC5h/c3NldHMvYXNzL3NhdGEvb3JpZ2luYWwvNzkzLzhhMTIw/Mjg5LWIyMmItNGI1/Yy05ZWQzLWZlZDVh/YzE0MDRjZC5qcGc.webp',
         productPageUrl: 'https://www.flipkart.com/clothing/pr?sid=2oq',
       },
       {
@@ -48,7 +49,7 @@ const MOCK_MERCHANTS = [
       {
         title: 'Beauty',
         imageUrl:
-          'https://photo-cdn2.icons8.com/4vvSfsIqLqnZk9FRQx-5gU4hNZ8PMElu0ufJB63oEQY/rs:fit:576:385/czM6Ly9pY29uczgu/bW9vc2UtcHJvZC5h/c3NldHMvYXNzZXRz/L3NhdGEvb3JpZ2lu/YWwvNDMyL2MwZDhi/NWI5LTFmZmItNGNh/Yy05YTg0LTY3NGRi/ZjQxZTFkYS5qcGc.webp',
+          'https://photo-cdn2.icons8.com/4vvSfsIqLqnZk9FRQx-5gU4hNZ8PMElu0ufJB63oEQY/rs:fit:576:385/czM6Ly9pY29uczgu/bW9vc2UtcHJvZC5h/c3NldHMvYXNzL3NhdGEvb3JpZ2lu/YWwvNDMyL2MwZDhi/NWI5LTFmZmItNGNh/Yy05YTg0LTY3NGRi/ZjQxZTFkYS5qcGc.webp',
         productPageUrl:
           'https://www.flipkart.com/beauty-and-personal-care/pr?sid=t06',
       },
@@ -89,7 +90,7 @@ const MOCK_PRODUCTS = [
       'https://www.flipkart.com/dell-latitude-3440-2024-intel-core-i3-12th-gen-1215u-8-gb-512-gb-ssd-windows-11-pro-business-laptop/p/itm7f265faf0871e?pid=COMH5G3F8BGPNY9N',
   },
   {
-    id: 3,
+    id: 4,
     title: 'Wrist Watch',
     imageUrl:
       'https://www.vaerwatches.com/cdn/shop/files/38-wristWrist-Shot-Lime.jpg?v=1712715073&width=600',
@@ -102,71 +103,73 @@ const MOCK_PRODUCTS = [
 const ExploreScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState(MOCK_PRODUCTS);
-  const [webUri, setWebUri] = useState(null);
+  const [webUri, setWebUri] = useState<string | null>(null);
 
+  // Search submit handler to open webview with search url
   const onSubmitSearch = () => {
-    setWebUri('https://www.flipkart.com/search?q=' + searchQuery);
+    setWebUri('https://www.flipkart.com/search?q=' + encodeURIComponent(searchQuery));
     setSearchQuery('');
   };
 
-  const _ = Array.from({ length: 2000000 }, (_, i) => i * Math.random()).sort(
-    (a, b) => b - a,
-  );
+  // Handle Android back button to close modal if open
+  useEffect(() => {
+    const backAction = () => {
+      if (webUri) {
+        setWebUri(null);
+        return true; // prevent default back action
+      }
+      return false;
+    };
+    BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => BackHandler.removeEventListener('hardwareBackPress', backAction);
+  }, [webUri]);
 
   return (
     <Background>
-      <ScrollView>
-        {/* Header Section */}
-        <HeaderSection />
-
-        {/* Searchbar */}
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search products, categories, ..."
-          onSubmit={onSubmitSearch}
-        />
-
-        {/* Merchants Section */}
-        {MOCK_MERCHANTS.map(merchant => (
+      {/* Use FlatList for merchants instead of ScrollView */}
+      <FlatList
+        data={MOCK_MERCHANTS}
+        keyExtractor={(item) => item.id}
+        ListHeaderComponent={
+          <>
+            <HeaderSection />
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search products, categories, ..."
+              onSubmit={onSubmitSearch}
+            />
+          </>
+        }
+        renderItem={({ item }) => (
           <EcomTile
-            key={merchant.id}
-            merchant={merchant}
+            merchant={item}
             onPress={() => {
-              // For this assignment, we hard-code Flipkart regardless of merchant pressed.
-              // You can swap merchant.websiteUrl if dynamic behaviour is needed.
+              // Hard coded to open flipkart homepage on merchant tap
               setWebUri('https://www.flipkart.com');
             }}
           />
-        ))}
+        )}
+        removeClippedSubviews={true}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={11}
+      />
 
-        {/* Latest purchases */}
-        <LatestPurchasesTile
-          products={products}
-          onRemove={id => {
-            const index = products.findIndex(p => p.id === id);
-            if (index !== -1) {
-              const newList = [...products];
-              newList.splice(index, 1);
-              setProducts(newList);
-            }
-          }}
-        />
-      </ScrollView>
+      <LatestPurchasesTile
+        products={products}
+        onRemove={(id) => {
+          setProducts((prev) => prev.filter((p) => p.id !== id));
+        }}
+      />
 
-      {/* WebView modal */}
-      <Modal visible={!!webUri} animationType="slide">
+      {/* Modal WebView with close button */}
+      <Modal visible={!!webUri} animationType="slide" onRequestClose={() => setWebUri(null)}>
         <View style={{ flex: 1 }}>
           <Pressable style={styles.closeBtn} onPress={() => setWebUri(null)}>
             <Text style={styles.closeText}>✕</Text>
           </Pressable>
-          {webUri && (
-            <WebView
-              // ref={WEBVIEW_REF}
-              source={{ uri: webUri }}
-              startInLoadingState
-            />
-          )}
+          {webUri && <WebView source={{ uri: webUri }} startInLoadingState />}
         </View>
       </Modal>
     </Background>
@@ -175,14 +178,12 @@ const ExploreScreen = () => {
 
 export default ExploreScreen;
 
-// ---------------- internal components ---------------- //
-const HeaderSection = () => {
-  return (
-    <View style={headerStyles.container}>
-      <Text style={headerStyles.welcomeText}>Welcome!</Text>
-    </View>
-  );
-};
+// ---------- internal components ---------- //
+const HeaderSection = () => (
+  <View style={headerStyles.container}>
+    <Text style={headerStyles.welcomeText}>Welcome!</Text>
+  </View>
+);
 
 const headerStyles = StyleSheet.create({
   container: {
@@ -196,18 +197,6 @@ const headerStyles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#212121',
-  },
-  walletBtn: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F1F1',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  walletText: {
-    fontSize: 18,
-    fontWeight: '700',
   },
 });
 
