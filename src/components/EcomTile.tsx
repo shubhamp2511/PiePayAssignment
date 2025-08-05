@@ -1,5 +1,5 @@
-// @ts-nocheck
-import React, { useState } from 'react';
+// EcomTile.tsx
+import React, { useState, memo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Dimensions,
   Pressable,
   Modal,
+  BackHandler,
 } from 'react-native';
 import WebView from 'react-native-webview';
 
@@ -15,70 +16,114 @@ const windowWidth = Dimensions.get('window').width;
 const itemsPerRow = 4;
 const circleSize = windowWidth * 0.2; // 20% of width
 
-const EcomTile = ({ merchant, onPress }) => {
-  const { name, categories, logoUrl } = merchant;
+// Fallback images (replace these with your local asset paths or URLs)
+const fallbackLogo = require('../assets/fallback_logo.png');
+const fallbackCategory = require('../assets/fallback_category.png');
 
-  if (categories && categories.length && !categories._mutated) {
-    categories.push({
-      title: 'More',
-      imageUrl: 'https://img.icons8.com/fluency/96/000000/more.png',
-    });
-  }
-  // Limit to two rows by default, allow expand/collapse
+// Memoized CategoryItem to handle individual image errors
+const CategoryItem = memo(({ cat, onPress }: { cat: any; onPress: () => void }) => {
+  const [imgError, setImgError] = useState(false);
+
+  return (
+    <Pressable style={styles.circle} onPress={onPress}>
+      <Image
+        source={imgError ? fallbackCategory : { uri: cat.imageUrl }}
+        style={styles.categoryImage}
+        onError={() => setImgError(true)}
+      />
+      <Text style={styles.categoryTitle}>{cat.title}</Text>
+    </Pressable>
+  );
+});
+
+interface Merchant {
+  name: string;
+  categories: any[];
+  logoUrl: string;
+}
+
+interface EcomTileProps {
+  merchant: Merchant;
+  onPress?: () => void;
+}
+
+const EcomTile = memo(({ merchant, onPress }: EcomTileProps) => {
+  const { name, logoUrl } = merchant;
+
+  // Avoid mutating merchant.categories directly
+  let categories = merchant.categories || [];
   const [expanded, setExpanded] = useState(false);
+  const [webUri, setWebUri] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
 
-  const visibleCategories = expanded ? categories : categories.slice(0, 7);
+  // Add "More" category only once without mutating original array
+  const categoriesWithMore =
+    categories.length && !categories.some((cat) => cat.title === 'More')
+      ? [...categories, { title: 'More', imageUrl: 'https://img.icons8.com/fluency/96/000000/more.png' }]
+      : categories;
 
-  const rows = [];
+  // Limit categories shown by default before expansion
+  const visibleCategories = expanded ? categoriesWithMore : categoriesWithMore.slice(0, 7);
+
+  // Split visible categories into rows
+  const rows: any[] = [];
   for (let i = 0; i < visibleCategories.length; i += itemsPerRow) {
     rows.push(visibleCategories.slice(i, i + itemsPerRow));
   }
 
   const handleToggle = () => setExpanded(!expanded);
-  const [webUri, setWebUri] = useState(null);
+
+  // Android hardware back button handler to close modal
+  useEffect(() => {
+    const backHandler = () => {
+      if (webUri) {
+        setWebUri(null);
+        return true; // Prevent default behavior
+      }
+      return false;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', backHandler);
+    return () => BackHandler.removeEventListener('hardwareBackPress', backHandler);
+  }, [webUri]);
 
   return (
     <View style={styles.container}>
       <Pressable onPress={onPress}>
         <View style={styles.headerRow}>
-          <Image source={{ uri: logoUrl }} style={styles.logo} />
+          <Image
+            source={logoError ? fallbackLogo : { uri: logoUrl }}
+            style={styles.logo}
+            onError={() => setLogoError(true)}
+          />
           <Text style={styles.headerText}>Buy on {name}</Text>
         </View>
       </Pressable>
 
-      {/* category grid */}
+      {/* category grid rows */}
       {rows.map((row, rowIdx) => (
         <View
           key={`row-${rowIdx}`}
-          style={[
-            styles.row,
-            { justifyContent: row.length < 3 ? 'flex-start' : 'space-between' },
-          ]}
+          style={[styles.row, { justifyContent: row.length < 3 ? 'flex-start' : 'space-between' }]}
         >
           {row.map((cat, idx) => (
-            <Pressable
+            <CategoryItem
               key={`cat-${idx}`}
-              style={styles.circle}
+              cat={cat}
               onPress={() => {
-                setWebUri(cat.productPageUrl);
+                if (cat.productPageUrl) {
+                  setWebUri(cat.productPageUrl);
+                }
               }}
-            >
-              <Image
-                source={{ uri: cat.imageUrl }}
-                style={styles.categoryImage}
-              />
-              <Text style={styles.categoryTitle}>{cat.title}</Text>
-            </Pressable>
+            />
           ))}
         </View>
       ))}
 
       {/* view more / less toggle */}
-      {categories.length > 7 && (
+      {categoriesWithMore.length > 7 && (
         <Pressable onPress={handleToggle} style={styles.viewMoreBtn}>
-          <Text style={styles.viewMoreText}>
-            {expanded ? 'View less' : 'View more'}
-          </Text>
+          <Text style={styles.viewMoreText}>{expanded ? 'View less' : 'View more'}</Text>
         </Pressable>
       )}
 
@@ -93,7 +138,7 @@ const EcomTile = ({ merchant, onPress }) => {
       </Modal>
     </View>
   );
-};
+});
 
 export default EcomTile;
 
