@@ -52,21 +52,22 @@ With Metro running, open a new terminal window/pane from the root of your React 
 ```sh
 yarn android
 ```
- # Backend Setup (API Server)
-    1. Navigate to Backend folder
+# Backend Setup (API Server)
 
-       ```sh
+### Step 1. Navigate to Backend folder
+
+```sh
 cd backend
 ```
-    2. Install Dependencies
+### Step 2. Install Dependencies
 
-    ```sh
+```sh
 npm install
 ```
 
-    3. Start the backend server
+### Step 3. Start the backend server
 
-    ```sh
+```sh
 npm start
 ```
 
@@ -74,30 +75,30 @@ The backend API will run at http://localhost:3000.
 
 # API Details
 
- ## POST /api/prices
+## POST /api/prices
 
-  Request Body:-
+### Request Body:-
 
 ```sh
    {
   "productTitle": "string", // API friendly title with underscores
   "wowDealPrice": "string|null" // Price extracted from Flipkart or null
    }
-   ```
-   Stores the price data in-memory.
+```
+Stores the price data in-memory.
 
- ## GET /api/prices/:productTitle
+## GET /api/prices/:productTitle
 
- Response:-
+### Response:-
 
- ```sh
+```sh
    {
   "flipkartPrice": 5000, // Static price
   "wowDealPrice": "string|null", // Returned wow deal or fallback to flipkartPrice
   "productImgUri": "string", // Sample image URI
   "savingsPercentage": 20 // Discount percentage or 0 if no deal
   }
-   ```
+```
 
 # Assumptions
 Flipkart price is static (5000) for demo purposes.
