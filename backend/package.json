@@ -1,0 +1,20 @@
+{
+    "name": "piepay-backend",
+    "version": "1.0.0",
+    "main": "server.ts",
+    "scripts": {
+      "start": "ts-node-dev --respawn --transpile-only server.ts"
+    },
+    "dependencies": {
+      "express": "^4.18.2",
+      "cors": "^2.8.5"
+    },
+    "devDependencies": {
+      "typescript": "^5.1.6",
+      "@types/node": "^20.4.2",
+      "@types/express": "^4.17.17",
+      "@types/cors": "^2.8.12",
+      "ts-node-dev": "^2.0.0"
+    }
+  }
+  
